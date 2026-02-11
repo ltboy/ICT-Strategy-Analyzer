@@ -5,3 +5,4 @@ dist
 .bun-cache
 .tmp_chanpy
 .tmp_web_guidelines.md
+data/
