@@ -16,6 +16,7 @@ import {
 } from './data/localCache'
 import type { BinanceInterval, KLine, PriceSource } from './types/market'
 
+// 页面状态：数据源、参数、缓存与图层开关
 const source = ref<PriceSource>('binance')
 const symbol = ref('BTCUSDT')
 const interval = ref<BinanceInterval>('15m')
@@ -31,10 +32,11 @@ const showBis = ref(true)
 const showSegments = ref(true)
 const showZhongshus = ref(true)
 const showIctBis = ref(false)
-const showIctBos = ref(false)
+const showIctStructure = ref(false)
 
 const analysisMode = ref<'chan' | 'ict'>('chan')
 
+// 计算结果：Chan 与 ICT 并行计算，展示层按模式切换
 const chanResult = computed(() => runChanAnalysis(data.value))
 const ictResult = computed(() => runIctAnalysis(data.value))
 const intervalOptions: BinanceInterval[] = ['1m', '5m', '15m', '1h', '4h', '1d']
@@ -42,12 +44,13 @@ const intervalOptions: BinanceInterval[] = ['1m', '5m', '15m', '1h', '4h', '1d']
 watch(
   analysisMode,
   (mode) => {
+    // 模式互斥：切换到一种结构时，自动关闭另一种结构图层
     if (mode === 'chan') {
       showBis.value = true
       showSegments.value = true
       showZhongshus.value = true
       showIctBis.value = false
-      showIctBos.value = false
+      showIctStructure.value = false
       return
     }
 
@@ -55,12 +58,13 @@ watch(
     showSegments.value = false
     showZhongshus.value = false
     showIctBis.value = true
-    showIctBos.value = true
+    showIctStructure.value = true
   },
   { immediate: true }
 )
 
 function refreshSnapshots(): void {
+  // 从本地缓存刷新快照列表，并默认选中最新一条
   snapshots.value = listSnapshotMetas()
   if (!selectedSnapshotId.value && snapshots.value.length > 0) {
     selectedSnapshotId.value = snapshots.value[0].id
@@ -78,6 +82,7 @@ function formatSnapshotTime(savedAt: number): string {
 }
 
 function applySnapshotToForm(meta: MarketSnapshotMeta): void {
+  // 反填快照上下文到表单，方便复盘同一组参数
   source.value = meta.source
 
   if (meta.source === 'binance') {
@@ -197,6 +202,7 @@ function loadSelectedSnapshot(): void {
 }
 
 function saveCurrentSnapshot(): void {
+  // 手动保存当前图表数据，便于后续离线复用
   if (data.value.length === 0) {
     status.value = '当前没有可保存数据'
     return
@@ -309,7 +315,7 @@ onMounted(() => {
 
         <template v-else>
           <label class="check-item"><input v-model="showIctBis" type="checkbox" name="show_ict_bis" /> ICT 笔</label>
-          <label class="check-item"><input v-model="showIctBos" type="checkbox" name="show_ict_bos" /> BOS</label>
+          <label class="check-item"><input v-model="showIctStructure" type="checkbox" name="show_ict_structure" /> BOS/CHOCH</label>
         </template>
       </div>
 
@@ -327,6 +333,7 @@ onMounted(() => {
           <span>分型 {{ ictResult.fractals.length }}</span>
           <span>ICT 笔 {{ ictResult.bis.length }}</span>
           <span>BOS {{ ictResult.bosEvents.length }}</span>
+          <span>CHOCH {{ ictResult.chochEvents.length }}</span>
         </template>
       </div>
     </header>
@@ -341,11 +348,12 @@ onMounted(() => {
         :ict-fractals="ictResult.fractals"
         :ict-bis="ictResult.bis"
         :ict-bos-events="ictResult.bosEvents"
+        :ict-choch-events="ictResult.chochEvents"
         :show-bis="showBis"
         :show-segments="showSegments"
         :show-zhongshus="showZhongshus"
         :show-ict-bis="showIctBis"
-        :show-ict-bos="showIctBos"
+        :show-ict-structure="showIctStructure"
       />
     </section>
   </main>

@@ -16,6 +16,10 @@ function toBiRangeItem(bi: Bi, biIndex: number): BiRangeItem {
   }
 }
 
+// 区间重叠计算：
+// high = 所有区间高点最小值
+// low = 所有区间低点最大值
+// 只有 high > low 才视为有效重叠
 function overlapRange(items: BiRangeItem[]): { high: number; low: number } | null {
   if (items.length === 0) {
     return null
@@ -63,6 +67,7 @@ export function buildZhongshus(segments: Segment[], bis: Bi[]): Zhongshu[] {
     }
 
     const pair = freeItems.slice(-2)
+    // 当前实现用 2 个候选反向笔做中枢起点（简化版）
     const overlap = overlapRange(pair)
     if (!overlap) {
       return

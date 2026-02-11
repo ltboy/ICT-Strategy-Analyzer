@@ -1,5 +1,8 @@
 import type { Bi, Fractal } from './types'
 
+// 同类分型比较：
+// - 顶分型保留更高顶
+// - 底分型保留更低底
 function isBetterFractal(candidate: Fractal, current: Fractal): boolean {
   if (candidate.kind !== current.kind) {
     return false
@@ -22,6 +25,7 @@ function normalizeFractals(fractals: Fractal[]): Fractal[] {
     const current = fractals[i]
 
     if (current.kind === prev.kind) {
+      // 连续同类分型只保留极值，避免同向噪声分型造成笔断裂
       if (isBetterFractal(current, prev)) {
         prev = current
       }
@@ -37,6 +41,7 @@ function normalizeFractals(fractals: Fractal[]): Fractal[] {
 }
 
 function directionOf(from: Fractal): 'up' | 'down' {
+  // 由起点分型决定笔方向，避免受收盘价波动干扰
   return from.kind === 'bottom' ? 'up' : 'down'
 }
 
@@ -56,6 +61,7 @@ export function buildBis(fractals: Fractal[]): Bi[] {
       continue
     }
 
+    // 笔由归一化后相邻异类分型组成
     result.push({
       direction: directionOf(from),
       from,
@@ -65,4 +71,3 @@ export function buildBis(fractals: Fractal[]): Bi[] {
 
   return result
 }
-

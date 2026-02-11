@@ -14,11 +14,12 @@ const props = defineProps<{
   ictFractals: IctFractal[]
   ictBis: IctBi[]
   ictBosEvents: IctStructureEvent[]
+  ictChochEvents: IctStructureEvent[]
   showBis: boolean
   showSegments: boolean
   showZhongshus: boolean
   showIctBis: boolean
-  showIctBos: boolean
+  showIctStructure: boolean
 }>()
 
 const host = ref<HTMLDivElement | null>(null)
@@ -28,6 +29,7 @@ let chart: Chart | null = null
 let resizeObserver: ResizeObserver | null = null
 const chartActionUnsubscribers: Array<() => void> = []
 
+// KLineChart 原生数据结构映射
 function toChartData(data: KLine[]) {
   return data.map((item) => ({
     timestamp: item.timestamp,
@@ -39,6 +41,7 @@ function toChartData(data: KLine[]) {
   }))
 }
 
+// 笔端点映射：上涨取 low->high，下跌取 high->low
 function toBiPoint(kind: 'start' | 'end', bi: Bi): { timestamp: number; value: number } {
   if (kind === 'start') {
     return {
@@ -52,6 +55,7 @@ function toBiPoint(kind: 'start' | 'end', bi: Bi): { timestamp: number; value: n
   }
 }
 
+// 线段端点映射
 function toSegmentPoint(kind: 'start' | 'end', segment: Segment): { timestamp: number; value: number } {
   if (kind === 'start') {
     return {
@@ -66,11 +70,17 @@ function toSegmentPoint(kind: 'start' | 'end', segment: Segment): { timestamp: n
   }
 }
 
-function toStructurePoint(event: IctStructureEvent): { timestamp: number; value: number } {
-  return {
+// 结构事件（BOS/CHOCH）转线段端点
+function toStructureSegmentPoints(event: IctStructureEvent): Array<{ timestamp: number; value: number }> {
+  const start = {
+    timestamp: event.brokenFrom.kline.timestamp,
+    value: event.direction === 'up' ? event.brokenFrom.kline.high : event.brokenFrom.kline.low
+  }
+  const end = {
     timestamp: event.confirmedBy.kline.timestamp,
     value: event.direction === 'up' ? event.confirmedBy.kline.high : event.confirmedBy.kline.low
   }
+  return [start, end]
 }
 
 function clearRectLayer(): void {
@@ -101,6 +111,7 @@ function drawZhongshuRects(): void {
   ctx.lineWidth = 1
 
   for (const zhongshu of props.zhongshus) {
+    // 中枢使用独立 canvas 绘制矩形，避免 overlay 能力受限
     const pixels = chart.convertToPixel(
       [
         { timestamp: zhongshu.start.kline.timestamp, value: zhongshu.high },
@@ -142,7 +153,7 @@ function drawOverlays(): void {
   chart.removeOverlay({ groupId: 'chan-bi' })
   chart.removeOverlay({ groupId: 'chan-segment' })
   chart.removeOverlay({ groupId: 'ict-bi' })
-  chart.removeOverlay({ groupId: 'ict-bos' })
+  chart.removeOverlay({ groupId: 'ict-structure' })
 
   if (props.showBis) {
     for (const bi of props.bis) {
@@ -193,21 +204,40 @@ function drawOverlays(): void {
     }
   }
 
-  if (props.showIctBos) {
+  if (props.showIctStructure) {
+    // BOS/CHOCH 使用同一图层分组，统一管理清理
     for (const event of props.ictBosEvents) {
       chart.createOverlay({
-        name: 'priceLine',
-        groupId: 'ict-bos',
-        points: [toStructurePoint(event)],
+        name: 'segment',
+        groupId: 'ict-structure',
+        points: toStructureSegmentPoints(event),
         styles: {
           line: {
-            color: event.direction === 'up' ? '#2fc25b' : '#ff6b81',
+            color: event.direction === 'up' ? '#0ecb81' : '#f6465d',
             size: 1,
             style: LineType.Dashed
           }
         },
         extendData: {
           text: 'BOS'
+        }
+      })
+    }
+
+    for (const event of props.ictChochEvents) {
+      chart.createOverlay({
+        name: 'segment',
+        groupId: 'ict-structure',
+        points: toStructureSegmentPoints(event),
+        styles: {
+          line: {
+            color: event.direction === 'up' ? '#0ecb81' : '#f6465d',
+            size: 2,
+            style: LineType.Dashed
+          }
+        },
+        extendData: {
+          text: 'CHOCH'
         }
       })
     }
@@ -273,6 +303,7 @@ function renderAll(): void {
 }
 
 function attachChartActions(chartInstance: Chart): void {
+  // 滚动/缩放/拖拽时重绘中枢矩形，保证像素坐标始终对齐
   const redraw: ActionCallback = () => {
     drawZhongshuRects()
   }
@@ -359,7 +390,7 @@ watch(
 )
 
 watch(
-  () => [props.ictBis, props.ictBosEvents, props.showIctBis, props.showIctBos],
+  () => [props.ictBis, props.ictBosEvents, props.ictChochEvents, props.showIctBis, props.showIctStructure],
   () => {
     drawOverlays()
   },

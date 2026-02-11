@@ -42,6 +42,7 @@ function readSnapshots(): MarketSnapshot[] {
   }
 }
 
+// 持久化快照，超限时自动裁剪；若 localStorage 空间不足则退化保存更少条目
 function persistSnapshots(list: MarketSnapshot[]): void {
   const snapshots = [...list].sort((a, b) => b.savedAt - a.savedAt).slice(0, MAX_SNAPSHOT_COUNT)
 
@@ -63,6 +64,7 @@ function persistSnapshots(list: MarketSnapshot[]): void {
   }
 }
 
+// 按 id 更新或插入快照
 function upsertSnapshot(snapshot: MarketSnapshot): MarketSnapshot {
   const snapshots = readSnapshots()
   const next = snapshots.filter((item) => item.id !== snapshot.id)
@@ -120,6 +122,7 @@ export function saveManualSnapshot(params: {
   limit?: number
   fileName?: string
 }): MarketSnapshot {
+  // 手动保存会根据当前数据源路由到对应快照逻辑
   if (params.source === 'binance') {
     if (!params.symbol || !params.interval || !params.limit) {
       throw new Error('缺少币安快照参数')

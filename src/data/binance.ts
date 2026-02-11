@@ -17,6 +17,7 @@ type BinanceRawKline = [
   string
 ]
 
+// 将查询参数转为 Binance 接口所需的 query string
 function toQueryString(query: BinanceKlineQuery): string {
   const searchParams = new URLSearchParams()
   searchParams.set('symbol', query.symbol.toUpperCase())
@@ -31,6 +32,7 @@ function toQueryString(query: BinanceKlineQuery): string {
   return searchParams.toString()
 }
 
+// 拉取 Binance USDT 永续 K 线，并统一转换为项目内部 KLine 结构
 export async function fetchBinanceKlines(query: BinanceKlineQuery): Promise<KLine[]> {
   const url = `${BASE_URL}/fapi/v1/klines?${toQueryString(query)}`
   const response = await fetch(url)
@@ -51,4 +53,3 @@ export async function fetchBinanceKlines(query: BinanceKlineQuery): Promise<KLin
     volume: Number(row[5])
   }))
 }
-

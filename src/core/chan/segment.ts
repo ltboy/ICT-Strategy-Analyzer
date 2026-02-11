@@ -1,9 +1,11 @@
 import type { Bi, Segment } from './types'
 
+// 上升线段突破判定：当前笔终点高于前两笔对应终点
 function isUpSeg(current: Bi, previous2: Bi): boolean {
   return current.to.kline.high > previous2.to.kline.high
 }
 
+// 下降线段突破判定：当前笔终点低于前两笔对应终点
 function isDownSeg(current: Bi, previous2: Bi): boolean {
   return current.to.kline.low < previous2.to.kline.low
 }
@@ -41,6 +43,7 @@ function createSegment(bis: Bi[], startBiIndex: number, endBiIndex: number, isSu
 }
 
 function replaceLastSegmentEnd(last: Segment, bis: Bi[], newEndBiIndex: number): void {
+  // 与 chan.py 的 sure_seg_update_end 思路一致：末端同向创新值可延伸终点
   const updated = createSegment(bis, last.startBiIndex, newEndBiIndex, last.isSure)
   last.to = updated.to
   last.high = updated.high
@@ -58,6 +61,7 @@ export function buildSegments(bis: Bi[]): Segment[] {
   // - 使用 idx 与 idx-2 的突破关系识别候选峰笔
   // - 反向候选峰之间至少隔 2 根笔才确认新线段
   const segments: Segment[] = []
+  // 候选峰值笔：用于确认一段线段的潜在终点
   let peakBiIndex: number | null = null
 
   for (let index = 0; index < bis.length; index += 1) {
@@ -136,4 +140,3 @@ export function buildSegments(bis: Bi[]): Segment[] {
 
   return segments
 }
-

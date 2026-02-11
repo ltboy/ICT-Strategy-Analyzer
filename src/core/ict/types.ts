@@ -2,7 +2,7 @@ import type { Bi, Fractal } from '../chan'
 
 export type IctFractal = Fractal
 export type IctStructureDirection = 'up' | 'down'
-export type IctStructureKind = 'bos'
+export type IctStructureKind = 'bos' | 'choch'
 
 export interface IctBi extends Bi {
   label: 'ict-bi'
@@ -21,4 +21,5 @@ export interface IctResult {
   fractals: IctFractal[]
   bis: IctBi[]
   bosEvents: IctStructureEvent[]
+  chochEvents: IctStructureEvent[]
 }

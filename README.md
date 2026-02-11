@@ -158,8 +158,9 @@ bun run build
 更新：当前已增加 ICT 的结构事件：
 
 - BOS（Break of Structure）
+- CHOCH（Change of Character）
 
 并在页面增加“Chan 结构 / ICT 结构”互斥模式：
 
 - 选择 `ICT 结构` 时，Chan 的笔/线段/中枢会自动清空显示。
-- 选择 `Chan 结构` 时，ICT 的笔/BOS 会自动清空显示。
+- 选择 `Chan 结构` 时，ICT 的笔/BOS/CHOCH 会自动清空显示。
