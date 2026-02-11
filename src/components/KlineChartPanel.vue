@@ -2,6 +2,7 @@
 import { ActionType, dispose, init, LineType, type ActionCallback, type Chart } from 'klinecharts'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { Bi, Fractal, Segment, Zhongshu } from '../core/chan'
+import type { IctBi, IctFractal } from '../core/ict'
 import type { KLine } from '../types/market'
 
 const props = defineProps<{
@@ -10,9 +11,12 @@ const props = defineProps<{
   bis: Bi[]
   segments: Segment[]
   zhongshus: Zhongshu[]
+  ictFractals: IctFractal[]
+  ictBis: IctBi[]
   showBis: boolean
   showSegments: boolean
   showZhongshus: boolean
+  showIctBis: boolean
 }>()
 
 const host = ref<HTMLDivElement | null>(null)
@@ -128,6 +132,7 @@ function drawOverlays(): void {
 
   chart.removeOverlay({ groupId: 'chan-bi' })
   chart.removeOverlay({ groupId: 'chan-segment' })
+  chart.removeOverlay({ groupId: 'ict-bi' })
 
   if (props.showBis) {
     for (const bi of props.bis) {
@@ -156,6 +161,22 @@ function drawOverlays(): void {
             color: segment.direction === 'up' ? '#0ecb81' : '#f6465d',
             size: 2,
             style: segment.isSure ? LineType.Solid : LineType.Dashed
+          }
+        }
+      })
+    }
+  }
+
+  if (props.showIctBis) {
+    for (const bi of props.ictBis) {
+      chart.createOverlay({
+        name: 'segment',
+        groupId: 'ict-bi',
+        points: [toBiPoint('start', bi), toBiPoint('end', bi)],
+        styles: {
+          line: {
+            color: bi.direction === 'up' ? '#7aebc3' : '#ff8fa1',
+            size: 1
           }
         }
       })
@@ -301,6 +322,14 @@ watch(
 
 watch(
   () => [props.bis, props.segments, props.zhongshus, props.showBis, props.showSegments, props.showZhongshus],
+  () => {
+    drawOverlays()
+  },
+  { deep: true }
+)
+
+watch(
+  () => [props.ictBis, props.showIctBis],
   () => {
     drawOverlays()
   },

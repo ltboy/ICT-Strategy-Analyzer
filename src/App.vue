@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import KlineChartPanel from './components/KlineChartPanel.vue'
 import { runChanAnalysis } from './core/chan'
+import { runIctAnalysis } from './core/ict'
 import { fetchBinanceKlines } from './data/binance'
 import { readCsvFileToKlines } from './data/csv'
 import {
@@ -29,8 +30,10 @@ const selectedSnapshotId = ref<string>('')
 const showBis = ref(true)
 const showSegments = ref(true)
 const showZhongshus = ref(true)
+const showIctBis = ref(false)
 
 const chanResult = computed(() => runChanAnalysis(data.value))
+const ictResult = computed(() => runIctAnalysis(data.value))
 const intervalOptions: BinanceInterval[] = ['1m', '5m', '15m', '1h', '4h', '1d']
 
 function refreshSnapshots(): void {
@@ -266,6 +269,7 @@ onMounted(() => {
         <label class="check-item"><input v-model="showBis" type="checkbox" name="show_bis" /> 笔</label>
         <label class="check-item"><input v-model="showSegments" type="checkbox" name="show_segments" /> 线段</label>
         <label class="check-item"><input v-model="showZhongshus" type="checkbox" name="show_zhongshus" /> 中枢</label>
+        <label class="check-item"><input v-model="showIctBis" type="checkbox" name="show_ict_bis" /> ICT 笔</label>
       </div>
 
       <div class="topbar-right" aria-live="polite">
@@ -275,6 +279,7 @@ onMounted(() => {
         <span>笔 {{ chanResult.bis.length }}</span>
         <span>段 {{ chanResult.segments.length }}</span>
         <span>中枢 {{ chanResult.zhongshus.length }}</span>
+        <span>ICT 笔 {{ ictResult.bis.length }}</span>
       </div>
     </header>
 
@@ -285,11 +290,13 @@ onMounted(() => {
         :bis="chanResult.bis"
         :segments="chanResult.segments"
         :zhongshus="chanResult.zhongshus"
+        :ict-fractals="ictResult.fractals"
+        :ict-bis="ictResult.bis"
         :show-bis="showBis"
         :show-segments="showSegments"
         :show-zhongshus="showZhongshus"
+        :show-ict-bis="showIctBis"
       />
     </section>
   </main>
 </template>
-

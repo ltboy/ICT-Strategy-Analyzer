@@ -140,3 +140,17 @@ bun run build
 - `src/core/chan/bi.ts`：笔构建
 - `src/core/chan/segment.ts`：线段构建
 - `src/core/chan/zhongshu.ts`：中枢识别
+
+## 9. ICT 指标（当前实现范围）
+
+当前新增了 ICT 基础模块（v0）：
+
+- 入口：`src/core/ict/index.ts`
+- 类型：`src/core/ict/types.ts`
+- 规则：分型与笔复用当前 Chan 同一套逻辑
+- 页面：新增 `ICT 笔` 开关，仅用于独立显示 ICT 线条层
+
+说明：
+
+- 目前只实现了 ICT 的“结构基础层（分型/笔）”。
+- 其余 ICT 概念（如 BOS/CHoCH、FVG、OB、流动性）暂未启用，等待后续规划后分阶段接入。
