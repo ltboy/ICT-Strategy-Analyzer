@@ -1,16 +1,16 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, ref, watch } from 'vue'
 import KlineChartPanel from './components/KlineChartPanel.vue'
 import { runChanAnalysis } from './core/chan'
 import { runIctAnalysis } from './core/ict'
 import { fetchBinanceKlines } from './data/binance'
-import { readCsvFileToKlines } from './data/csv'
+import { readJsonFileToKlines } from './data/json'
 import {
   getLatestSnapshot,
   getSnapshotById,
   listSnapshotMetas,
   saveBinanceSnapshot,
-  saveCsvSnapshot,
+  saveJsonSnapshot,
   saveManualSnapshot,
   type MarketSnapshotMeta
 } from './data/localCache'
@@ -23,7 +23,7 @@ const limit = ref(500)
 const status = ref('就绪')
 const loading = ref(false)
 const data = ref<KLine[]>([])
-const csvFileName = ref<string>('')
+const jsonFileName = ref<string>('')
 const snapshots = ref<MarketSnapshotMeta[]>([])
 const selectedSnapshotId = ref<string>('')
 
@@ -31,10 +31,34 @@ const showBis = ref(true)
 const showSegments = ref(true)
 const showZhongshus = ref(true)
 const showIctBis = ref(false)
+const showIctBos = ref(false)
+
+const analysisMode = ref<'chan' | 'ict'>('chan')
 
 const chanResult = computed(() => runChanAnalysis(data.value))
 const ictResult = computed(() => runIctAnalysis(data.value))
 const intervalOptions: BinanceInterval[] = ['1m', '5m', '15m', '1h', '4h', '1d']
+
+watch(
+  analysisMode,
+  (mode) => {
+    if (mode === 'chan') {
+      showBis.value = true
+      showSegments.value = true
+      showZhongshus.value = true
+      showIctBis.value = false
+      showIctBos.value = false
+      return
+    }
+
+    showBis.value = false
+    showSegments.value = false
+    showZhongshus.value = false
+    showIctBis.value = true
+    showIctBos.value = true
+  },
+  { immediate: true }
+)
 
 function refreshSnapshots(): void {
   snapshots.value = listSnapshotMetas()
@@ -66,11 +90,11 @@ function applySnapshotToForm(meta: MarketSnapshotMeta): void {
     if (meta.context.limit) {
       limit.value = meta.context.limit
     }
-    csvFileName.value = ''
+    jsonFileName.value = ''
     return
   }
 
-  csvFileName.value = meta.context.fileName ?? ''
+  jsonFileName.value = meta.context.fileName ?? ''
 }
 
 function loadLatestSnapshotOnStartup(): void {
@@ -120,7 +144,7 @@ async function loadFromBinance(): Promise<void> {
   }
 }
 
-async function handleCsvChange(event: Event): Promise<void> {
+async function handleJsonChange(event: Event): Promise<void> {
   const input = event.target as HTMLInputElement
   const file = input.files?.[0]
   if (!file) {
@@ -128,21 +152,21 @@ async function handleCsvChange(event: Event): Promise<void> {
   }
 
   loading.value = true
-  status.value = `正在解析 CSV：${file.name}`
+  status.value = `正在解析 JSON：${file.name}`
 
   try {
-    const klines = await readCsvFileToKlines(file)
+    const klines = await readJsonFileToKlines(file)
     data.value = klines
-    csvFileName.value = file.name
+    jsonFileName.value = file.name
 
-    const snapshot = saveCsvSnapshot({
+    const snapshot = saveJsonSnapshot({
       fileName: file.name,
       data: klines
     })
 
     selectedSnapshotId.value = snapshot.id
     refreshSnapshots()
-    status.value = `导入完成：${klines.length} 条`
+    status.value = `JSON 导入完成：${klines.length} 条`
   } catch (error) {
     status.value = error instanceof Error ? error.message : '导入失败'
   } finally {
@@ -184,7 +208,7 @@ function saveCurrentSnapshot(): void {
     symbol: symbol.value,
     interval: interval.value,
     limit: limit.value,
-    fileName: csvFileName.value || `manual-${Date.now()}.csv`
+    fileName: jsonFileName.value || `manual-${Date.now()}.json`
   })
 
   selectedSnapshotId.value = snapshot.id
@@ -210,7 +234,7 @@ onMounted(() => {
           <span>数据源</span>
           <select v-model="source" name="source" autocomplete="off">
             <option value="binance">币安永续</option>
-            <option value="csv">本地 CSV</option>
+            <option value="json">本地 JSON</option>
           </select>
         </label>
 
@@ -248,8 +272,8 @@ onMounted(() => {
 
         <template v-else>
           <label>
-            <span>CSV 文件</span>
-            <input type="file" name="csv_file" accept=".csv,text/csv" :disabled="loading" @change="handleCsvChange" />
+            <span>JSON 文件</span>
+            <input type="file" name="json_file" accept=".json,application/json" :disabled="loading" @change="handleJsonChange" />
           </label>
         </template>
 
@@ -266,20 +290,44 @@ onMounted(() => {
         <button type="button" :disabled="loading || !selectedSnapshotId" @click="loadSelectedSnapshot">加载缓存</button>
         <button type="button" :disabled="loading || data.length === 0" @click="saveCurrentSnapshot">保存缓存</button>
 
-        <label class="check-item"><input v-model="showBis" type="checkbox" name="show_bis" /> 笔</label>
-        <label class="check-item"><input v-model="showSegments" type="checkbox" name="show_segments" /> 线段</label>
-        <label class="check-item"><input v-model="showZhongshus" type="checkbox" name="show_zhongshus" /> 中枢</label>
-        <label class="check-item"><input v-model="showIctBis" type="checkbox" name="show_ict_bis" /> ICT 笔</label>
+        <div class="mode-tabs" role="radiogroup" aria-label="结构模式">
+          <label class="mode-tab">
+            <input v-model="analysisMode" type="radio" name="analysis_mode" value="chan" />
+            Chan 结构
+          </label>
+          <label class="mode-tab">
+            <input v-model="analysisMode" type="radio" name="analysis_mode" value="ict" />
+            ICT 结构
+          </label>
+        </div>
+
+        <template v-if="analysisMode === 'chan'">
+          <label class="check-item"><input v-model="showBis" type="checkbox" name="show_bis" /> 笔</label>
+          <label class="check-item"><input v-model="showSegments" type="checkbox" name="show_segments" /> 线段</label>
+          <label class="check-item"><input v-model="showZhongshus" type="checkbox" name="show_zhongshus" /> 中枢</label>
+        </template>
+
+        <template v-else>
+          <label class="check-item"><input v-model="showIctBis" type="checkbox" name="show_ict_bis" /> ICT 笔</label>
+          <label class="check-item"><input v-model="showIctBos" type="checkbox" name="show_ict_bos" /> BOS</label>
+        </template>
       </div>
 
       <div class="topbar-right" aria-live="polite">
         <span>{{ status }}</span>
         <span>数据 {{ data.length }}</span>
-        <span>分型 {{ chanResult.fractals.length }}</span>
-        <span>笔 {{ chanResult.bis.length }}</span>
-        <span>段 {{ chanResult.segments.length }}</span>
-        <span>中枢 {{ chanResult.zhongshus.length }}</span>
-        <span>ICT 笔 {{ ictResult.bis.length }}</span>
+        <span>模式 {{ analysisMode === 'chan' ? 'Chan' : 'ICT' }}</span>
+        <template v-if="analysisMode === 'chan'">
+          <span>分型 {{ chanResult.fractals.length }}</span>
+          <span>笔 {{ chanResult.bis.length }}</span>
+          <span>段 {{ chanResult.segments.length }}</span>
+          <span>中枢 {{ chanResult.zhongshus.length }}</span>
+        </template>
+        <template v-else>
+          <span>分型 {{ ictResult.fractals.length }}</span>
+          <span>ICT 笔 {{ ictResult.bis.length }}</span>
+          <span>BOS {{ ictResult.bosEvents.length }}</span>
+        </template>
       </div>
     </header>
 
@@ -292,10 +340,12 @@ onMounted(() => {
         :zhongshus="chanResult.zhongshus"
         :ict-fractals="ictResult.fractals"
         :ict-bis="ictResult.bis"
+        :ict-bos-events="ictResult.bosEvents"
         :show-bis="showBis"
         :show-segments="showSegments"
         :show-zhongshus="showZhongshus"
         :show-ict-bis="showIctBis"
+        :show-ict-bos="showIctBos"
       />
     </section>
   </main>

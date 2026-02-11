@@ -136,6 +136,33 @@ button {
   margin: 0;
 }
 
+.mode-tabs {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px;
+  border: 1px solid #2b3139;
+  border-radius: 8px;
+  background: #1f232d;
+}
+
+.mode-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 26px;
+  padding: 0 8px;
+  border-radius: 6px;
+  color: #b7bdc6;
+  cursor: pointer;
+}
+
+.mode-tab input {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+}
+
 .topbar-right {
   display: flex;
   flex-wrap: wrap;

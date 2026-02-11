@@ -2,7 +2,7 @@
 import { ActionType, dispose, init, LineType, type ActionCallback, type Chart } from 'klinecharts'
 import { onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import type { Bi, Fractal, Segment, Zhongshu } from '../core/chan'
-import type { IctBi, IctFractal } from '../core/ict'
+import type { IctBi, IctFractal, IctStructureEvent } from '../core/ict'
 import type { KLine } from '../types/market'
 
 const props = defineProps<{
@@ -13,10 +13,12 @@ const props = defineProps<{
   zhongshus: Zhongshu[]
   ictFractals: IctFractal[]
   ictBis: IctBi[]
+  ictBosEvents: IctStructureEvent[]
   showBis: boolean
   showSegments: boolean
   showZhongshus: boolean
   showIctBis: boolean
+  showIctBos: boolean
 }>()
 
 const host = ref<HTMLDivElement | null>(null)
@@ -61,6 +63,13 @@ function toSegmentPoint(kind: 'start' | 'end', segment: Segment): { timestamp: n
   return {
     timestamp: segment.to.kline.timestamp,
     value: segment.direction === 'up' ? segment.to.kline.high : segment.to.kline.low
+  }
+}
+
+function toStructurePoint(event: IctStructureEvent): { timestamp: number; value: number } {
+  return {
+    timestamp: event.confirmedBy.kline.timestamp,
+    value: event.direction === 'up' ? event.confirmedBy.kline.high : event.confirmedBy.kline.low
   }
 }
 
@@ -133,6 +142,7 @@ function drawOverlays(): void {
   chart.removeOverlay({ groupId: 'chan-bi' })
   chart.removeOverlay({ groupId: 'chan-segment' })
   chart.removeOverlay({ groupId: 'ict-bi' })
+  chart.removeOverlay({ groupId: 'ict-bos' })
 
   if (props.showBis) {
     for (const bi of props.bis) {
@@ -178,6 +188,26 @@ function drawOverlays(): void {
             color: bi.direction === 'up' ? '#7aebc3' : '#ff8fa1',
             size: 1
           }
+        }
+      })
+    }
+  }
+
+  if (props.showIctBos) {
+    for (const event of props.ictBosEvents) {
+      chart.createOverlay({
+        name: 'priceLine',
+        groupId: 'ict-bos',
+        points: [toStructurePoint(event)],
+        styles: {
+          line: {
+            color: event.direction === 'up' ? '#2fc25b' : '#ff6b81',
+            size: 1,
+            style: LineType.Dashed
+          }
+        },
+        extendData: {
+          text: 'BOS'
         }
       })
     }
@@ -329,7 +359,7 @@ watch(
 )
 
 watch(
-  () => [props.ictBis, props.showIctBis],
+  () => [props.ictBis, props.ictBosEvents, props.showIctBis, props.showIctBos],
   () => {
     drawOverlays()
   },

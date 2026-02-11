@@ -4,7 +4,7 @@
 
 当前实现目标：
 - 前端展示 K 线
-- 支持两种行情输入（Binance USDT 永续 / 本地 CSV）
+- 支持两种行情输入（Binance USDT 永续 / 本地 JSON）
 - 提供缠论基础结构（分型、笔、线段、中枢）
 - 支持行情本地缓存，便于复用同一批数据
 
@@ -29,11 +29,11 @@ bun run build
 - 参数：`symbol`、`interval`、`limit`（可扩展 `startTime`、`endTime`）
 - 实现文件：`src/data/binance.ts`
 
-### 2.2 本地 CSV 导入
+### 2.2 本地 JSON 导入
 
-- 必需列（大小写不敏感）：`time/open/high/low/close/volume`
-- 兼容时间格式：毫秒时间戳、秒时间戳、可解析日期字符串
-- 实现文件：`src/data/csv.ts`
+- 支持数组格式 K 线对象：`timestamp/open/high/low/close/volume`
+- `timestamp` 支持秒或毫秒时间戳（会自动归一）
+- 实现文件：`src/data/json.ts`
 
 ## 3. 本地缓存机制
 
@@ -42,7 +42,7 @@ bun run build
 ### 3.1 缓存行为
 
 - 每次从 Binance 加载成功后自动保存快照
-- 每次 CSV 导入成功后自动保存快照
+- 每次 JSON 导入成功后自动保存快照
 - 可在界面点击“保存当前行情”手动保存
 - 页面启动时自动尝试加载最近一次缓存
 
@@ -134,7 +134,7 @@ bun run build
 - `src/App.vue`：页面交互、数据加载、缓存管理
 - `src/components/KlineChartPanel.vue`：KLineChart 渲染与笔绘制
 - `src/data/binance.ts`：Binance 行情适配
-- `src/data/csv.ts`：CSV 解析
+- `src/data/json.ts`：JSON 解析
 - `src/data/localCache.ts`：本地缓存
 - `src/core/chan/fractal.ts`：分型识别
 - `src/core/chan/bi.ts`：笔构建
@@ -153,4 +153,13 @@ bun run build
 说明：
 
 - 目前只实现了 ICT 的“结构基础层（分型/笔）”。
-- 其余 ICT 概念（如 BOS/CHoCH、FVG、OB、流动性）暂未启用，等待后续规划后分阶段接入。
+- 其余 ICT 概念（如 FVG、OB、流动性）暂未启用，等待后续规划后分阶段接入。
+
+更新：当前已增加 ICT 的结构事件：
+
+- BOS（Break of Structure）
+
+并在页面增加“Chan 结构 / ICT 结构”互斥模式：
+
+- 选择 `ICT 结构` 时，Chan 的笔/线段/中枢会自动清空显示。
+- 选择 `Chan 结构` 时，ICT 的笔/BOS 会自动清空显示。

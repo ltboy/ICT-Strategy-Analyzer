@@ -75,8 +75,8 @@ export function buildBinanceSnapshotId(symbol: string, interval: BinanceInterval
   return `binance:${symbol.toUpperCase()}:${interval}:${limit}`
 }
 
-export function buildCsvSnapshotId(fileName: string): string {
-  return `csv:${fileName.trim().toLowerCase()}`
+export function buildJsonSnapshotId(fileName: string): string {
+  return `json:${fileName.trim().toLowerCase()}`
 }
 
 export function saveBinanceSnapshot(params: {
@@ -99,11 +99,11 @@ export function saveBinanceSnapshot(params: {
   })
 }
 
-export function saveCsvSnapshot(params: { fileName: string; data: KLine[] }): MarketSnapshot {
+export function saveJsonSnapshot(params: { fileName: string; data: KLine[] }): MarketSnapshot {
   return upsertSnapshot({
-    id: buildCsvSnapshotId(params.fileName),
-    source: 'csv',
-    label: `CSV ${params.fileName}`,
+    id: buildJsonSnapshotId(params.fileName),
+    source: 'json',
+    label: `JSON ${params.fileName}`,
     savedAt: Date.now(),
     context: {
       fileName: params.fileName
@@ -132,7 +132,7 @@ export function saveManualSnapshot(params: {
     })
   }
 
-  return saveCsvSnapshot({
+  return saveJsonSnapshot({
     fileName: params.fileName ?? `manual-${new Date().toISOString()}`,
     data: params.data
   })
@@ -158,4 +158,3 @@ export function getLatestSnapshot(): MarketSnapshot | null {
   const snapshots = readSnapshots()
   return snapshots.length > 0 ? snapshots[0] : null
 }
-

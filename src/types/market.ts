@@ -31,5 +31,4 @@ export interface BinanceKlineQuery {
   endTime?: number
 }
 
-export type PriceSource = 'binance' | 'csv'
-
+export type PriceSource = 'binance' | 'json'
